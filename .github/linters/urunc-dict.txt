@@ -224,7 +224,6 @@ nerdctl
 netcli
 netdev
 netgo
-netkit
 netlink
 netlog
 netns

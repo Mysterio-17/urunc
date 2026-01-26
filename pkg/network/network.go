@@ -18,8 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/jackpal/gateway"
@@ -31,9 +29,6 @@ import (
 const (
 	DefaultInterface = "eth0" // FIXME: Discover the veth endpoint name instead of using default "eth0". See: https://github.com/urunc-dev/urunc/issues/14
 	DefaultTap       = "tapX_urunc"
-	// MinNetkitKernelVersion is the minimum kernel version (6.8) required for netkit support
-	MinNetkitKernelMajor = 6
-	MinNetkitKernelMinor = 8
 )
 
 var netlog = logrus.WithField("subsystem", "network")
@@ -81,54 +76,6 @@ func getTapIndex() (int, error) {
 		return tapCount, fmt.Errorf("TAP interfaces count higher than 255")
 	}
 	return tapCount, nil
-}
-
-// isNetkitSupported checks if the kernel version is >= 6.8
-func isNetkitSupported() bool {
-	var uname unix.Utsname
-	if err := unix.Uname(&uname); err != nil {
-		netlog.Debugf("failed to get kernel version: %v", err)
-		return false
-	}
-
-	// Convert release to string (e.g., "6.8.0-31-generic")
-	release := string(uname.Release[:])
-	release = strings.Split(release, "\x00")[0] // trim null bytes
-	parts := strings.Split(release, ".")
-	if len(parts) < 2 {
-		return false
-	}
-
-	major, err := strconv.Atoi(parts[0])
-	if err != nil {
-		return false
-	}
-	minor, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return false
-	}
-
-	if major > MinNetkitKernelMajor {
-		return true
-	}
-	if major == MinNetkitKernelMajor && minor >= MinNetkitKernelMinor {
-		return true
-	}
-	return false
-}
-
-// isNetkitEnabled checks if netkit support is enabled via environment variable
-func isNetkitEnabled() bool {
-	val := os.Getenv("URUNC_ENABLE_NETKIT")
-	return val == "1" || strings.ToLower(val) == "true"
-}
-
-// getLinkType returns the type of the network link (e.g., "veth", "netkit", "device")
-func getLinkType(link netlink.Link) string {
-	if link == nil {
-		return "unknown"
-	}
-	return link.Type()
 }
 
 func createTapDevice(name string, mtu int, ownerUID, ownerGID uint32) (netlink.Link, error) {
@@ -270,21 +217,8 @@ func addRedirectFilter(source netlink.Link, target netlink.Link) error {
 }
 
 func networkSetup(tapName string, ipAddress string, redirectLink netlink.Link, addTCRules bool, uid uint32, gid uint32) (netlink.Link, error) {
-	linkType := getLinkType(redirectLink)
-	netlog.Debugf("starting for tapName=%s ipAddress=%s redirectLink=%s linkType=%s addTCRules=%v",
-		tapName, ipAddress, redirectLink.Attrs().Name, linkType, addTCRules)
-
-	// Log netkit status if enabled
-	if isNetkitEnabled() && isNetkitSupported() {
-		if linkType == "netkit" {
-			netlog.Infof("netkit device detected: %s (kernel supports netkit)", redirectLink.Attrs().Name)
-		} else {
-			netlog.Debugf("netkit enabled but device %s is type %s (not netkit)", redirectLink.Attrs().Name, linkType)
-		}
-	} else if isNetkitEnabled() && !isNetkitSupported() {
-		netlog.Warnf("netkit enabled but kernel version < %d.%d (detected type: %s)",
-			MinNetkitKernelMajor, MinNetkitKernelMinor, linkType)
-	}
+	netlog.Debugf("starting for tapName=%s ipAddress=%s redirectLink=%s addTCRules=%v",
+		tapName, ipAddress, redirectLink.Attrs().Name, addTCRules)
 
 	// Sanity check: ensure eth0 exists in this namespace
 	err := ensureEth0Exists()
