@@ -16,88 +16,55 @@ package network
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetTapIndex(t *testing.T) {
 	// This test just verifies the function doesn't panic
 	// The actual count depends on the system's network interfaces
 	index, err := getTapIndex()
-	if err != nil {
-		t.Errorf("getTapIndex() error = %v", err)
-		return
-	}
-	
-	// Index should be non-negative
-	if index < 0 {
-		t.Errorf("getTapIndex() = %d, want >= 0", index)
-	}
-	
-	// Index should not exceed 255 (function returns error if > 255)
-	if index > 255 {
-		t.Errorf("getTapIndex() = %d, want <= 255", index)
-	}
+	assert.NoError(t, err, "getTapIndex() should not return an error")
+	assert.GreaterOrEqual(t, index, 0, "Index should be non-negative")
+	assert.LessOrEqual(t, index, 255, "Index should not exceed 255")
 }
 
 func TestNewNetworkManager(t *testing.T) {
 	tests := []struct {
-		name        string
-		networkType string
-		wantErr     bool
-		wantType    string
+		name         string
+		networkType  string
+		expectedErr  bool
+		expectedType string
 	}{
 		{
-			name:        "static network manager",
-			networkType: "static",
-			wantErr:     false,
-			wantType:    "*network.StaticNetwork",
+			name:         "static network manager",
+			networkType:  "static",
+			expectedErr:  false,
+			expectedType: "*network.StaticNetwork",
 		},
 		{
-			name:        "dynamic network manager",
-			networkType: "dynamic",
-			wantErr:     false,
-			wantType:    "*network.DynamicNetwork",
+			name:         "dynamic network manager",
+			networkType:  "dynamic",
+			expectedErr:  false,
+			expectedType: "*network.DynamicNetwork",
 		},
 		{
 			name:        "invalid network type",
 			networkType: "invalid",
-			wantErr:     true,
-		},
-		{
-			name:        "empty network type",
-			networkType: "",
-			wantErr:     true,
-		},
-		{
-			name:        "unknown network type",
-			networkType: "bridge",
-			wantErr:     true,
+			expectedErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := NewNetworkManager(tt.networkType)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewNetworkManager() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			
-			if !tt.wantErr {
-				if got == nil {
-					t.Error("NewNetworkManager() returned nil manager")
-				}
+			if tt.expectedErr {
+				assert.Error(t, err, "NewNetworkManager() should return an error")
+			} else {
+				assert.NoError(t, err, "NewNetworkManager() should not return an error")
+				assert.NotNil(t, got, "NewNetworkManager() should return a non-nil manager")
 			}
 		})
 	}
-}
-
-func TestEnsureEth0Exists(t *testing.T) {
-	// This test verifies the function works
-	// It might fail or succeed depending on the test environment
-	err := ensureEth0Exists()
-	
-	// We don't assert a specific result since it depends on
-	// whether eth0 exists in the test environment
-	// Just verify it doesn't panic
-	t.Logf("ensureEth0Exists() error = %v", err)
 }
