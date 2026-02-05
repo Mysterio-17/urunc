@@ -34,12 +34,12 @@ func TestIdToGuestCID(t *testing.T) {
 		{
 			name:        "empty string",
 			id:          "",
-			expectedCID: idToGuestCID(""),
+			expectedCID: 3,
 		},
 		{
 			name:        "simple id",
 			id:          "container123",
-			expectedCID: idToGuestCID("container123"),
+			expectedCID: 49,
 		},
 	}
 
@@ -60,20 +60,22 @@ func TestIdToGuestCID(t *testing.T) {
 
 func TestIsValidVSockAddress(t *testing.T) {
 	tests := []struct {
-		name          string
-		rpcAddress    string
-		monitor       string
-		expectedValid bool
-		expectedErr   bool
-		expectedPath  string
+		name                 string
+		rpcAddress           string
+		monitor              string
+		expectedValid        bool
+		expectedErr          bool
+		expectedPath         string
+		expectedModifiedAddr string
 	}{
 		{
-			name:          "valid qemu vsock address",
-			rpcAddress:    "vsock://2:1234",
-			monitor:       "qemu",
-			expectedValid: true,
-			expectedErr:   false,
-			expectedPath:  "",
+			name:                 "valid qemu vsock address",
+			rpcAddress:           "vsock://2:1234",
+			monitor:              "qemu",
+			expectedValid:        true,
+			expectedErr:          false,
+			expectedPath:         "",
+			expectedModifiedAddr: "vsock://2:1234",
 		},
 		{
 			name:          "invalid qemu vsock - wrong CID",
@@ -111,20 +113,22 @@ func TestIsValidVSockAddress(t *testing.T) {
 			expectedErr:   true,
 		},
 		{
-			name:          "valid firecracker unix socket",
-			rpcAddress:    "unix:///tmp/vaccel.sock_1234",
-			monitor:       "firecracker",
-			expectedValid: true,
-			expectedErr:   false,
-			expectedPath:  "/tmp",
+			name:                 "valid firecracker unix socket",
+			rpcAddress:           "unix:///tmp/vaccel.sock_1234",
+			monitor:              "firecracker",
+			expectedValid:        true,
+			expectedErr:          false,
+			expectedPath:         "/tmp",
+			expectedModifiedAddr: "vsock://2:1234",
 		},
 		{
-			name:          "valid firecracker nested path",
-			rpcAddress:    "unix:///var/run/urunc/vaccel.sock_5678",
-			monitor:       "firecracker",
-			expectedValid: true,
-			expectedErr:   false,
-			expectedPath:  "/var/run/urunc",
+			name:                 "valid firecracker nested path",
+			rpcAddress:           "unix:///var/run/urunc/vaccel.sock_5678",
+			monitor:              "firecracker",
+			expectedValid:        true,
+			expectedErr:          false,
+			expectedPath:         "/var/run/urunc",
+			expectedModifiedAddr: "vsock://2:5678",
 		},
 		{
 			name:          "firecracker invalid - wrong socket name",
@@ -165,6 +169,11 @@ func TestIsValidVSockAddress(t *testing.T) {
 
 			if tt.expectedPath != "" {
 				assert.Equal(t, tt.expectedPath, gotPath, "isValidVSockAddress() path mismatch")
+			}
+
+			// Check that rpcAddress is modified correctly (firecracker modifies it)
+			if tt.expectedModifiedAddr != "" {
+				assert.Equal(t, tt.expectedModifiedAddr, addr, "isValidVSockAddress() should modify rpcAddress correctly")
 			}
 		})
 	}

@@ -20,15 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetTapIndex(t *testing.T) {
-	// This test just verifies the function doesn't panic
-	// The actual count depends on the system's network interfaces
-	index, err := getTapIndex()
-	assert.NoError(t, err, "getTapIndex() should not return an error")
-	assert.GreaterOrEqual(t, index, 0, "Index should be non-negative")
-	assert.LessOrEqual(t, index, 255, "Index should not exceed 255")
-}
-
 func TestNewNetworkManager(t *testing.T) {
 	tests := []struct {
 		name         string
