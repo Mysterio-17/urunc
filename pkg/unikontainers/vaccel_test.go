@@ -20,11 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	minCID = 3
-	maxCID = 99
-)
-
 func TestIdToGuestCID(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -48,11 +43,6 @@ func TestIdToGuestCID(t *testing.T) {
 			t.Parallel()
 			got := idToGuestCID(tt.id)
 
-			// Check if CID is within valid range
-			assert.GreaterOrEqual(t, got, minCID, "CID should be >= %d", minCID)
-			assert.LessOrEqual(t, got, maxCID, "CID should be <= %d", maxCID)
-
-			// Verify the expected result matches
 			assert.Equal(t, tt.expectedCID, got, "CID should match expected value")
 		})
 	}
