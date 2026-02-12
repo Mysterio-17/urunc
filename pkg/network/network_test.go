@@ -15,6 +15,7 @@
 package network
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -55,6 +56,9 @@ func TestNewNetworkManager(t *testing.T) {
 			} else {
 				assert.NoError(t, err, "NewNetworkManager() should not return an error")
 				assert.NotNil(t, got, "NewNetworkManager() should return a non-nil manager")
+				if tt.expectedType != "" {
+					assert.Equal(t, tt.expectedType, fmt.Sprintf("%T", got), "NewNetworkManager() should return the expected type")
+				}
 			}
 		})
 	}
